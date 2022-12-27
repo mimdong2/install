@@ -18,12 +18,7 @@ echo "net.core.somaxconn=65535" >> /etc/sysctl.conf
 
 echo '>>>>> [Redis] THP 비활성화'
 echo never > /sys/kernel/mm/transparent_hugepage/enabled
-cat >> /etc/rc.local << EOF
-#!/bin/bash
-echo never > /sys/kernel/mm/transparent_hugepage/enabled
-EOF
-chmod 755 /etc/rc.local
-systemctl enable rc.local.service
+echo "echo never > /sys/kernel/mm/transparent_hugepage/enabled" >> /etc/rc.local
 
 
 echo '>>>>> [Redis] 필요 패키지(build-essential pkg-config gcc tcl) 설치'
@@ -42,50 +37,44 @@ make test
 make install
 cd ..
 
-echo '>>>>> [Redis] 계정 생성 및 sudoers 권한 부여 '
-useradd -s /bin/bash -d /home/redis -m redis
-echo "redis ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/redis
+echo '>>>>> [Sentinel] 계정 생성 및 sudoers 권한 부여 '
+useradd -s /bin/bash -d /home/sentinel -m sentinel
+echo "sentinel ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/sentinel
 
-echo '>>>>> [Redis] 설정, 데이터, 로그, PID 디렉토리 생성 '
-mkdir /etc/redis
-mkdir /var/log/redis
-mkdir /var/lib/redis
-mkdir /var/run/redis
+echo '>>>>> [Sentinel] 설정, 데이터, 로그, PID 디렉토리 생성 '
+mkdir /etc/sentinel
+mkdir /var/log/sentinel
+mkdir /var/lib/sentinel
+mkdir /var/run/sentinel
 
-echo '>>>>> [Redis] 설정파일 복사'
-cp ./conf/redis.conf /etc/redis/
+echo '>>>>> [Sentinel] 설정파일 복사'
+cp ./conf/sentinel.conf /etc/sentinel/
 
-chown -R redis:redis /etc/redis/
-chown -R redis:redis /var/log/redis
-chown -R redis:redis /var/lib/redis
-chown -R redis:redis /var/run/redis
+chown -R sentinel:sentinel /etc/sentinel/
+chown -R sentinel:sentinel /var/log/sentinel
+chown -R sentinel:sentinel /var/lib/sentinel
+chown -R sentinel:sentinel /var/run/sentinel
 
-
-echo '>>>>> [Redis] redis.service 설정'
-cat >> /etc/systemd/system/redis.service <<EOF
+echo '>>>>> [Sentinel] redis.service 설정'
+cat >> /etc/systemd/system/sentinel.service <<EOF
 [Unit]
-Description=Redis In-Memory Data Store
+Description=Redis sentinel
 After=network.target
 
 [Service]
 Type=notify
-User=redis
-Group=redis
+User=sentinel
+Group=sentinel
 LimitNOFILE=65536
-ExecStart=/usr/local/bin/redis-server /etc/redis/redis.conf
-ExecStop=/usr/local/bin/redis-cli shutdown
-TimeoutStartSec=900
-TimeoutStopSec=900
-RestartSec=5s
-Restart=on-success 
-#on-success은 종료가 성공한 경우만 재시작함
-#Restart=always
+ExecStart=/usr/local/bin/redis-sentinel /etc/sentinel/sentinel.conf
+ExecStop=/usr/local/bin/redis-cli -p 26379 shutdown
+Restart=always
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-echo '>>>>>  [Redis] 서비스 실행 및 자동 실행 설정'
+echo '>>>>>  [Sentinel] 서비스 실행 및 자동 실행 설정'
 systemctl daemon-reload
-systemctl start redis
-systemctl enable redis
+systemctl start sentinel
+systemctl enable sentinel
