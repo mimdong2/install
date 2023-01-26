@@ -8,6 +8,15 @@ fi
 
 __POSTGRESQL_VERSION__=$1
 
+echo '>>>>> [PostgreSQL] 초기화'
+sudo killall apt apt-get
+sudo rm /var/lib/apt/lists/lock
+sudo rm /var/cache/apt/archives/lock
+sudo rm /var/lib/dpkg/lock
+sudo apt -y update
+sudo apt -y upgrade
+sudo timedatectl set-timezone Asia/Seoul
+
 echo '>>>>> [PostgreSQL] 필요 패키지(gcc libreadline-dev zlib-devel) 설치'
 apt-get update -y
 apt-get install gcc libreadline-dev zlib-devel -y
